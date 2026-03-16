@@ -967,6 +967,30 @@
       "category": "security",
       "source": "./external_plugins/autofix-bot",
       "homepage": "https://github.com/anthropics/claude-plugins-public/tree/main/external_plugins/autofix-bot"
+    },
+    {
+      "name": "stagehand",
+      "description": "Browser automation skill for Claude Code using Stagehand. Automate web interactions, extract data, and navigate websites using natural language.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Browserbase"
+      },
+      "source": {
+        "source": "github",
+        "repo": "browserbase/agent-browse"
+      },
+      "category": "automation",
+      "keywords": [
+        "browser",
+        "automation",
+        "stagehand",
+        "web-scraping"
+      ],
+      "homepage": "https://github.com/browserbase/agent-browse",
+      "strict": false,
+      "skills": [
+        "./.claude/skills/browser-automation"
+      ]
     }
   ]
 }
