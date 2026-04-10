@@ -265,6 +265,17 @@
       "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/claude-md-management"
     },
     {
+      "name": "cloudflare",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/cloudflare/skills.git",
+        "sha": "5ec03da67e230df52b698255c8e5979dc9b124b6"
+      },
+      "description": "Skills for the Cloudflare developer platform: Workers, Durable Objects, Agents SDK, MCP servers, Wrangler CLI, and web performance.",
+      "category": "deployment",
+      "homepage": "https://github.com/cloudflare/skills"
+    },
+    {
       "name": "cloudinary",
       "description": "Use Cloudinary directly in Claude. Manage assets, apply transformations, optimize media, and more through natural conversation.",
       "source": {
