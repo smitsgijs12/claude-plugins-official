@@ -58,20 +58,25 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh label create sha-bump --color 0e8a16 --description "Automated SHA bump" 2>/dev/null || true
 
+      - name: Overlay marketplace data from main
+        if: steps.existing.outputs.count == '0'
+        run: |
+          git fetch origin main --depth=1 --quiet
+          git checkout origin/main -- .claude-plugin/marketplace.json
+
       - name: Discover and apply SHA bumps
         if: steps.existing.outputs.count == '0'
         id: discover
         env:
           GH_TOKEN: ${{ github.token }}
           PR_BODY_PATH: /tmp/bump-pr-body.md
+          PLUGIN: ${{ inputs.plugin }}
+          MAX_BUMPS: ${{ inputs.max_bumps }}
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
-          args=(--max "${{ inputs.max_bumps || '20' }}")
-          if [ -n "${{ inputs.plugin }}" ]; then
-            args+=(--plugin "${{ inputs.plugin }}")
-          fi
-          if [ "${{ inputs.dry_run }}" = "true" ]; then
-            args+=(--dry-run)
-          fi
+          args=(--max "${MAX_BUMPS:-20}")
+          [[ -n "$PLUGIN" ]] && args+=(--plugin "$PLUGIN")
+          [[ "$DRY_RUN" = "true" ]] && args+=(--dry-run)
           python3 .github/scripts/discover_bumps.py "${args[@]}"
 
       - uses: oven-sh/setup-bun@v2
