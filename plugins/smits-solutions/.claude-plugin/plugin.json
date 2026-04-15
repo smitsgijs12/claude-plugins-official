@@ -1,0 +1,8 @@
+{
+  "name": "smits-solutions",
+  "version": "1.0.0",
+  "description": "Skills voor Smits Solutions — Gijs's freelance n8n automation agency",
+  "skills": [
+    "skills/competitor-scanner"
+  ]
+}
