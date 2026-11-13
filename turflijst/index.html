@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#121214">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Turflijst">
+<meta name="description" content="Tel je drankjes en volg elkaars voortgang.">
+<title>Turflijst</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one phone-width column; sticky header, six views (feed, spel, tellen, ranglijst, groep, profiel), fixed five-item tab bar. Dark only, by choice: it's used at night in a bar. */
+:root {
+  --bg: #121214;
+  --panel: #1D1D20;
+  --well: #000000;
+  --ink: #F3F3F4;
+  --muted: #8C8C95;
+  --line: #2C2C31;
+  --accent: #F2B544;
+  --accent-ink: #1A1305;
+  --accent-soft: #2F2510;
+  --barf: #A9B866;
+  --bad: #E8786B;
+  --good: #6FCF8E;
+  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+html, body { background: var(--bg); color: var(--ink); }
+body { font-family: var(--font-body); font-size: 15px; line-height: 1.45; -webkit-tap-highlight-color: transparent; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+button:disabled { cursor: default; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+input, select { font: inherit; color: var(--ink); }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.app { max-width: 560px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 calc(104px + env(safe-area-inset-bottom, 0px)); }
+
+/* Header */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); display: flex; align-items: center; gap: 10px; padding-block: 16px 14px; }
+.btn-back { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--panel); flex: none; }
+.btn-back svg { width: 20px; height: 20px; }
+.brand { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.brand b { font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: -0.01em; font-stretch: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.brand span { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.top-acts { display: flex; align-items: center; gap: 8px; flex: none; }
+.btn-clear { color: var(--muted); font-size: 16px; padding: 8px 6px; }
+.btn-clear:not(:disabled):hover { color: var(--ink); }
+.btn-clear:disabled { opacity: 0.5; }
+.btn-reg { font-weight: 700; font-size: 16px; padding: 9px 14px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); white-space: nowrap; }
+.btn-reg:disabled { background: var(--panel); color: var(--muted); }
+
+.banner { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; color: var(--muted); margin-bottom: 14px; }
+.banner b { color: var(--ink); font-weight: 600; }
+
+/* Generic */
+.view { display: flex; flex-direction: column; gap: 16px; }
+.label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.sec { display: flex; flex-direction: column; gap: 10px; }
+.sec-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.card { background: var(--panel); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.card h2 { margin: 0; font-family: var(--font-display); font-size: 20px; font-weight: 800; font-stretch: 92%; text-wrap: balance; }
+.card p { margin: 0; color: var(--muted); font-size: 14px; }
+.hint { color: var(--muted); font-size: 13px; margin: 0; }
+.warn { color: var(--bad); }
+.empty { color: var(--muted); font-size: 14px; padding-block: 6px; }
+.link-btn { color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+.link-btn:hover { color: var(--ink); }
+.link-btn.warn { color: var(--bad); }
+.btn-sec { padding: 11px 16px; border-radius: 12px; background: var(--ink); color: var(--bg); font-weight: 600; white-space: nowrap; }
+.btn-sec:disabled { background: var(--line); color: var(--muted); }
+.btn-sm { padding: 7px 12px; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 600; font-size: 13.5px; white-space: nowrap; }
+.btn-sm.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+.btn-sm.ghost[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn-sm:disabled { opacity: 0.5; }
+.field { width: 100%; min-width: 0; background: var(--well); border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; }
+.field::placeholder { color: var(--muted); }
+.form { display: flex; flex-direction: column; gap: 10px; }
+.form-row { display: flex; gap: 8px; }
+.form-row > * { flex: 1; min-width: 0; }
+.add { display: flex; gap: 8px; }
+.add input { flex: 1; min-width: 0; }
+.radio-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.radio-row label { position: relative; }
+.radio-row input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.radio-row span { display: inline-block; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: 13.5px; font-weight: 600; }
+.radio-row input:checked + span { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.radio-row input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.seg { display: inline-flex; background: var(--panel); border-radius: 999px; padding: 3px; align-self: flex-start; flex-wrap: wrap; }
+.seg button { padding: 7px 14px; border-radius: 999px; font-weight: 600; font-size: 14px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.seg .n { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 11px; font-weight: 800; display: inline-grid; place-items: center; }
+.segs { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Chips & avatars */
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; padding: 8px 14px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); font-weight: 500; font-size: 14px; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.chip:disabled { opacity: 0.45; }
+.chip .me { font-size: 11px; opacity: 0.7; }
+.chip-av { padding: 5px 12px 5px 5px; }
+.chip-sm { padding: 6px 11px; font-size: 13px; font-weight: 600; }
+.av { width: 36px; height: 36px; border-radius: 50%; display: inline-grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; position: relative; letter-spacing: 0.02em; }
+.av-s { width: 24px; height: 24px; font-size: 9.5px; }
+.av-l { width: 72px; height: 72px; font-size: 24px; }
+.av.on::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 28%; height: 28%; min-width: 8px; min-height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 2px var(--panel); }
+.nm-btn { font-weight: 600; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.nm-btn:hover { text-decoration: underline; text-underline-offset: 2px; }
+.nm-btn.inline { display: inline; font-weight: 600; color: var(--ink); }
+
+/* Counters */
+.counters { background: var(--panel); border-radius: 18px; padding: 22px 14px 24px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 26px 12px; }
+.counter { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; }
+.counter .name { font-size: 12.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.counter.is-barf .name { color: var(--barf); }
+.pill { width: 100%; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; background: var(--well); border-radius: 999px; height: 58px; }
+.pill button { height: 100%; font-size: 26px; font-weight: 500; line-height: 1; display: grid; place-items: center; border-radius: 999px; }
+.pill button:active:not(:disabled) { background: var(--line); }
+.pill button:disabled { color: var(--line); }
+.pill output { font-family: var(--font-display); font-weight: 800; font-size: 28px; font-variant-numeric: tabular-nums; min-width: 1.6ch; text-align: center; }
+.counter.has-value output { color: var(--accent); }
+.counter.is-barf.has-value output { color: var(--barf); }
+@media (max-width: 370px) { .counters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Compose */
+.compose { background: var(--panel); border-radius: 18px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.compose-row { display: flex; gap: 10px; align-items: center; }
+.photo-btn { width: 52px; height: 52px; flex: none; border-radius: 14px; background: var(--well); display: grid; place-items: center; color: var(--muted); cursor: pointer; overflow: hidden; position: relative; }
+.photo-btn svg { width: 24px; height: 24px; }
+.photo-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-btn:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.compose-line { color: var(--muted); font-size: 13px; margin: 0; }
+.compose-line b { color: var(--accent); font-weight: 700; }
+.tonight { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.tonight b { color: var(--ink); font-weight: 600; }
+.log { display: flex; flex-direction: column; }
+.log-row { display: grid; grid-template-columns: 48px 1fr auto; gap: 10px; align-items: baseline; padding-block: 10px; border-bottom: 1px solid var(--line); font-size: 14px; }
+.log-row:last-child { border-bottom: 0; }
+.log-row time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
+.log-row .what { min-width: 0; }
+.log-row .what span { color: var(--muted); }
+
+/* Feed */
+.feed { display: flex; flex-direction: column; gap: 14px; }
+.post { background: var(--panel); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 10px; }
+.post-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
+.post-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.post-time { color: var(--muted); font-size: 12.5px; }
+.post-pts { font-family: var(--font-display); font-weight: 800; font-size: 15px; color: var(--accent); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.post-pts.neg { color: var(--barf); }
+.post-photo { background: var(--well); position: relative; display: block; width: 100%; cursor: zoom-in; }
+.post-img { display: block; width: 100%; max-height: 560px; object-fit: cover; }
+.photo-missing { display: grid; place-items: center; height: 160px; color: var(--muted); font-size: 13px; }
+.post-body { padding: 10px 14px 0; display: flex; flex-direction: column; gap: 4px; }
+.post-cap { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+.post-drinks { margin: 0; color: var(--muted); font-size: 13.5px; }
+.post-acts { display: flex; align-items: center; gap: 4px; padding: 6px 8px 0; }
+.act { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 999px; color: var(--muted); font-weight: 600; font-size: 14px; }
+.act svg { width: 21px; height: 21px; }
+.act.on { color: var(--accent); }
+.act:hover { color: var(--ink); }
+.act.on:hover { color: var(--accent); }
+.push { margin-left: auto; padding-right: 6px; }
+.post-likes { margin: 0; padding: 0 14px; font-size: 13px; color: var(--muted); }
+.comments { display: flex; flex-direction: column; gap: 6px; padding: 8px 14px 0; }
+.cmt { font-size: 14px; overflow-wrap: anywhere; display: flex; gap: 8px; align-items: baseline; }
+.cmt-text { flex: 1; min-width: 0; }
+.cmt-text .nm-btn { display: inline; margin-right: 6px; }
+.cmt time { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.more { padding: 6px 14px 0; align-self: flex-start; }
+.cmt-form { display: flex; gap: 8px; padding: 10px 14px 0; }
+.cmt-form input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 999px; }
+.notice { background: var(--panel); border-radius: 16px; padding: 12px 14px; display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: start; }
+.notice .ic { width: 36px; height: 36px; border-radius: 50%; background: var(--well); display: grid; place-items: center; color: var(--accent); }
+.notice .ic svg { width: 19px; height: 19px; }
+.notice-body { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.notice-body p { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.notice-body .q { font-weight: 600; }
+.notice-meta { color: var(--muted); font-size: 12.5px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.btn-more { align-self: center; padding: 10px 18px; border-radius: 999px; border: 1px solid var(--line); font-weight: 600; color: var(--muted); }
+.night-card { background: var(--panel); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; text-align: left; width: 100%; }
+.night-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.night-top b { font-family: var(--font-display); font-weight: 800; font-size: 18px; }
+.night-top span { color: var(--muted); font-size: 13px; }
+.podium { display: flex; flex-direction: column; gap: 6px; }
+.pod { display: grid; grid-template-columns: 18px 24px 1fr auto; gap: 8px; align-items: center; font-size: 14px; }
+.pod .r { font-family: var(--font-display); font-weight: 800; color: var(--muted); text-align: center; }
+.pod:first-child .r { color: var(--accent); }
+.pod .p { font-family: var(--font-display); font-weight: 800; font-variant-numeric: tabular-nums; }
+.pod .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* Agenda */
+.events { display: flex; flex-direction: column; gap: 8px; }
+.event { background: var(--panel); border-radius: 16px; padding: 12px 14px; display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; }
+.cd { display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--well); border-radius: 12px; height: 56px; }
+.cd b { font-family: var(--font-display); font-weight: 800; font-size: 22px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.cd span { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; margin-top: 3px; }
+.ev-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ev-body b { font-weight: 600; overflow-wrap: anywhere; }
+.ev-body span { color: var(--muted); font-size: 12.5px; }
+.ev-acts { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+
+/* Spel */
+.game { background: var(--panel); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.game-top { display: flex; gap: 10px; align-items: flex-start; }
+.game-title { flex: 1; min-width: 0; font-weight: 600; font-size: 16px; overflow-wrap: anywhere; }
+.game-title.big { font-family: var(--font-display); font-weight: 800; font-size: 20px; font-stretch: 94%; line-height: 1.2; text-wrap: balance; }
+.pts-badge { font-family: var(--font-display); font-weight: 800; color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 3px 10px; font-size: 14px; white-space: nowrap; }
+.game-meta { color: var(--muted); font-size: 12.5px; }
+.claims { display: flex; flex-direction: column; }
+.claim { display: flex; align-items: center; gap: 10px; padding-block: 8px; border-top: 1px solid var(--line); }
+.claim .nm-btn { flex: 1; }
+.claim-right { display: flex; align-items: center; gap: 8px; flex: none; }
+.state { font-size: 12.5px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.state.ok { color: var(--good); }
+.game-acts { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.odds { display: flex; flex-direction: column; background: var(--well); border-radius: 14px; overflow: hidden; }
+.odd { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); width: 100%; }
+.odd:last-child { border-bottom: 0; }
+.odd .side { font-weight: 600; font-size: 16px; }
+.odd .mult { font-family: var(--font-display); font-weight: 800; font-size: 17px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.odd .who { grid-column: 1 / -1; color: var(--muted); font-size: 12.5px; overflow-wrap: anywhere; }
+button.odd:hover { background: var(--panel); }
+.odd.mine { background: var(--accent-soft); }
+.odd.mine .mult, .odd.win .mult { color: var(--accent); }
+.odd.win .side { color: var(--good); }
+.stakes { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.result { display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.result b { font-weight: 600; }
+.gain { font-variant-numeric: tabular-nums; font-weight: 600; }
+.gain.up { color: var(--good); }
+.gain.down { color: var(--bad); }
+.vote { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.vote-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* Ranglijst */
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.stat { background: var(--panel); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat b { font-family: var(--font-display); font-weight: 800; font-size: 26px; font-variant-numeric: tabular-nums; line-height: 1.1; overflow-wrap: anywhere; }
+.stat b.small { font-size: 18px; }
+.stat span { color: var(--muted); font-size: 12.5px; }
+.stat.barf b { color: var(--barf); }
+.board { display: flex; flex-direction: column; background: var(--panel); border-radius: 16px; overflow: hidden; }
+.row { display: grid; grid-template-columns: 26px 36px 1fr auto; gap: 10px; align-items: center; padding: 11px 14px; border-bottom: 1px solid var(--line); text-align: left; width: 100%; }
+.row:last-child { border-bottom: 0; }
+button.row:hover { background: #232327; }
+.rank { font-family: var(--font-display); font-weight: 800; font-size: 18px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+.row.first .rank { color: var(--accent); }
+.who { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.who .nm { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who .nm small { color: var(--muted); font-weight: 500; font-size: 12px; margin-left: 6px; }
+.who .bd { color: var(--muted); font-size: 12.5px; }
+.who .bd .bf { color: var(--barf); }
+.score { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.score b { font-family: var(--font-display); font-weight: 800; font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1; }
+.score b.neg { color: var(--barf); }
+.score small { color: var(--muted); font-size: 11.5px; }
+.score svg { display: block; color: var(--muted); }
+.row.first .score svg { color: var(--accent); }
+
+/* Groep */
+.members { display: flex; flex-direction: column; background: var(--panel); border-radius: 16px; overflow: hidden; }
+.member { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.member:last-child { border-bottom: 0; }
+.member .who { flex: 1; }
+.member .acts { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.member input { flex: 1; min-width: 0; }
+.tag-me { font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-ink); background: var(--accent); padding: 3px 8px; border-radius: 999px; }
+.points-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.points-grid label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); min-width: 0; }
+.points-grid input { text-align: center; font-family: var(--font-display); font-weight: 800; font-size: 20px; padding: 8px; }
+@media (max-width: 370px) { .points-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Profiel */
+.prof-head { display: flex; align-items: center; gap: 14px; }
+.prof-head h2 { font-family: var(--font-display); font-size: 28px; font-weight: 800; font-stretch: 92%; margin: 0; overflow-wrap: anywhere; }
+.prof-tags { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+.online-tag { font-size: 12.5px; color: var(--good); font-weight: 600; }
+.bars { display: flex; flex-direction: column; gap: 9px; }
+.bar-row { display: grid; grid-template-columns: 74px 1fr 34px; gap: 10px; align-items: center; font-size: 13px; }
+.bar-row span:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.bar-track { height: 10px; background: var(--well); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--accent); border-radius: 3px; }
+.bar-fill.barf { background: var(--barf); }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; border-radius: 14px; overflow: hidden; }
+.grid3 button { aspect-ratio: 1 / 1; background: var(--well); overflow: hidden; display: block; max-width: 100%; }
+.grid3 img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Tabs */
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--bg); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.tabs-in { max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+.tabs button { position: relative; padding: 10px 0 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.tabs button[aria-current="page"] { color: var(--ink); }
+.tabs svg { width: 22px; height: 22px; }
+.tab-ic { height: 28px; display: grid; place-items: center; }
+.tab-main .tab-ic { width: 46px; border-radius: 10px; background: var(--panel); color: var(--ink); }
+.tab-main[aria-current="page"] .tab-ic { background: var(--accent); color: var(--accent-ink); }
+.tab-badge { position: absolute; top: 5px; left: calc(50% + 8px); min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 10.5px; font-weight: 800; display: grid; place-items: center; line-height: 1; }
+
+/* Toast & lightbox */
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 7; width: min(528px, calc(100% - 32px)); background: var(--ink); color: var(--bg); border-radius: 14px; padding: 12px 14px; display: flex; gap: 12px; align-items: center; font-size: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
+.toast span { flex: 1; min-width: 0; }
+.toast button { font-weight: 700; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+.lightbox { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,0.94); display: grid; place-items: center; padding-top: max(16px, env(safe-area-inset-top, 0px)); padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); cursor: zoom-out; }
+.lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+.lightbox-close { position: absolute; top: max(14px, env(safe-area-inset-top, 0px)); right: max(14px, env(safe-area-inset-right, 0px)); width: 40px; height: 40px; border-radius: 50%; background: var(--panel); font-size: 22px; line-height: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  .toast { animation: rise 180ms ease-out; }
+  @keyframes rise { from { transform: translate(-50%, 8px); opacity: 0.4; } to { transform: translate(-50%, 0); opacity: 1; } }
+  .act.pop svg { animation: pop 260ms ease-out; }
+  @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.3) rotate(-8deg); } 100% { transform: scale(1); } }
+}
+
+/* Gate (join screen) */
+.gate { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.gated .app, .gated .tabs { display: none !important; }
+.gate-card { width: min(420px, 100%); background: var(--panel); border-radius: 18px; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+.gate-card h2 { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 800; }
+.gate-card p { margin: 0; }
+.gate-logo { font-family: var(--font-display); font-weight: 800; font-size: 30px; font-stretch: 90%; letter-spacing: -0.01em; }
+
+/* Charts */
+:root { --series-1: #c98500; --series-2: #3987e5; --context: #4A4A52; --axis: #3A3A41; }
+.chart { position: relative; background: var(--panel); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.chart svg { width: 100%; max-width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; }
+.chart svg:focus-visible, .ch-hit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ch-grid { stroke: var(--line); stroke-width: 1; }
+.ch-base { stroke: var(--axis); stroke-width: 1; }
+.ch-tick { fill: var(--muted); font-size: 11px; font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+.ch-label { fill: var(--ink); font-size: 12px; font-weight: 600; font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+.ch-ctx { fill: none; stroke: var(--context); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+.ch-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.ch-line.s1 { stroke: var(--series-1); }
+.ch-line.s2 { stroke: var(--series-2); }
+.ch-dot { stroke: var(--panel); stroke-width: 2; }
+.ch-dot.s1 { fill: var(--series-1); }
+.ch-dot.s2 { fill: var(--series-2); }
+.ch-cross { stroke: var(--muted); stroke-width: 1; }
+.ch-bar { fill: var(--series-1); }
+.ch-bar.lift { fill: #DD9A1A; }
+.ch-hit { fill: transparent; cursor: pointer; outline: none; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.key { width: 16px; height: 2px; border-radius: 1px; display: inline-block; }
+.key.s1, .k.s1 { background: var(--series-1); }
+.key.s2, .k.s2 { background: var(--series-2); }
+.key.ctx, .k.ctx { background: var(--context); }
+.k.none { background: transparent; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); border-radius: 10px; padding: 8px 10px; font-size: 12.5px; min-width: 130px; max-width: 220px; z-index: 2; box-shadow: 0 6px 20px rgba(0,0,0,0.45); display: flex; flex-direction: column; gap: 3px; }
+.tip .t-h { font-weight: 600; margin-bottom: 2px; }
+.tip .t-r { display: flex; align-items: center; gap: 8px; }
+.tip .t-r .k { width: 12px; height: 2px; flex: none; }
+.tip .t-r b { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 2.5ch; }
+.tip .t-r span:last-child { opacity: 0.75; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tbl-btn { align-self: flex-start; }
+.tbl-wrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th, .tbl td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.tbl th { color: var(--muted); font-weight: 600; font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; }
+.tbl .n { text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<div class="gate" id="gate" hidden>
+  <div class="gate-card">
+    <b class="gate-logo">Turflijst</b>
+    <div id="gate-loading"><p class="hint">Verbinden…</p></div>
+    <form class="form" id="gate-code" hidden>
+      <h2>Doe mee</h2>
+      <p class="hint">Vul de groepscode in die je van je vrienden kreeg, of open de uitnodigingslink.</p>
+      <input class="field" id="gate-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Groepscode" aria-label="Groepscode">
+      <button type="submit" class="btn-sec" id="gate-submit">Meedoen</button>
+      <p class="hint warn" id="gate-error" hidden>Deze code klopt niet. Controleer hem en probeer het opnieuw.</p>
+    </form>
+    <div class="form" id="gate-msg" hidden>
+      <p id="gate-msg-text"></p>
+      <button type="button" class="btn-sec" id="gate-retry">Opnieuw proberen</button>
+    </div>
+  </div>
+</div>
+<div class="app">
+  <header class="top">
+    <button type="button" class="btn-back" id="btn-back" aria-label="Terug" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <div class="brand"><b id="brand-title">Turflijst</b><span id="night-label">Vanavond</span></div>
+    <div class="top-acts" id="top-acts">
+      <button type="button" class="btn-clear" id="btn-clear">Wissen</button>
+      <button type="button" class="btn-reg" id="btn-reg">Registreren →</button>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <!-- Feed -->
+  <main class="view" id="view-feed" hidden>
+    <section class="sec" id="online-strip" hidden></section>
+    <section class="sec">
+      <div class="sec-row"><span class="label">Agenda</span><button type="button" class="link-btn" id="btn-plan">+ Plan iets</button></div>
+      <form class="card form" id="event-form" hidden>
+        <h2>Iets plannen</h2>
+        <input class="field" id="ev-title" type="text" maxlength="60" placeholder="Bijvoorbeeld: Carnaval, verjaardag Sem" autocomplete="off" aria-label="Wat gaan jullie doen">
+        <div class="form-row">
+          <input class="field" id="ev-date" type="date" aria-label="Datum">
+          <input class="field" id="ev-time" type="time" aria-label="Tijd (optioneel)">
+        </div>
+        <div class="form-row"><button type="submit" class="btn-sec">Plannen</button><button type="button" class="btn-sec" id="ev-cancel" style="background:var(--line);color:var(--ink)">Annuleren</button></div>
+      </form>
+      <div class="events" id="events"></div>
+    </section>
+    <div id="night-card"></div>
+    <section class="sec">
+      <span class="label">Feed</span>
+      <div class="feed" id="feed"></div>
+      <button type="button" class="btn-more" id="feed-more" hidden>Meer laden</button>
+    </section>
+  </main>
+
+  <!-- Spel -->
+  <main class="view" id="view-spel" hidden>
+    <div class="seg" role="group" aria-label="Soort spel">
+      <button type="button" id="seg-ch" aria-pressed="true">Uitdagingen <span class="n" id="seg-ch-n" hidden></span></button>
+      <button type="button" id="seg-bet" aria-pressed="false">Voorspellingen <span class="n" id="seg-bet-n" hidden></span></button>
+    </div>
+    <section class="sec" id="spel-ch">
+      <form class="card form" id="ch-form">
+        <h2>Daag de groep uit</h2>
+        <input class="field" id="ch-title" type="text" maxlength="80" placeholder="Wie durft een shotje tequila met zout?" autocomplete="off" aria-label="Uitdaging">
+        <div class="radio-row" role="radiogroup" aria-label="Punten voor wie het doet">
+          <label><input type="radio" name="ch-pts" value="5"><span>5 pnt</span></label>
+          <label><input type="radio" name="ch-pts" value="10" checked><span>10 pnt</span></label>
+          <label><input type="radio" name="ch-pts" value="20"><span>20 pnt</span></label>
+          <label><input type="radio" name="ch-pts" value="50"><span>50 pnt</span></label>
+        </div>
+        <button type="submit" class="btn-sec" id="ch-submit">Uitdaging plaatsen</button>
+        <p class="hint" id="ch-rule"></p>
+      </form>
+      <div class="feed" id="ch-list"></div>
+    </section>
+    <section class="sec" id="spel-bet" hidden>
+      <form class="card form" id="bet-form">
+        <h2>Voorspel iets</h2>
+        <input class="field" id="bet-title" type="text" maxlength="100" placeholder="Sem valt vanavond als eerste in slaap" autocomplete="off" aria-label="Voorspelling">
+        <span class="label">Hoe waarschijnlijk?</span>
+        <div class="radio-row" id="bet-odds" role="radiogroup" aria-label="Hoe waarschijnlijk is het"></div>
+        <button type="submit" class="btn-sec" id="bet-submit">Voorspelling plaatsen</button>
+        <p class="hint">Iedereen zet punten in op Ja of Nee. Goed geraden levert inzet × vermenigvuldiger op, fout kost je inzet. Zodra iemand de uitkomst stemt, sluit de inzet.</p>
+      </form>
+      <div class="feed" id="bet-list"></div>
+    </section>
+  </main>
+
+  <!-- Tellen -->
+  <main class="view" id="view-tellen">
+    <div class="card" id="who-card" hidden>
+      <h2>Wie ben jij?</h2>
+      <p id="who-text">Kies je naam, dan registreer je standaard voor jezelf.</p>
+      <div class="chips" id="who-chips"></div>
+      <form class="add" id="who-add">
+        <input class="field" id="who-add-name" type="text" maxlength="24" placeholder="Jouw naam" autocomplete="off" aria-label="Jouw naam">
+        <button type="submit" class="btn-sec" id="who-add-btn">Dit ben ik</button>
+      </form>
+    </div>
+
+    <div class="counters" id="counters"></div>
+
+    <div class="compose" id="compose">
+      <div class="compose-row">
+        <label class="photo-btn" id="photo-btn" title="Foto toevoegen">
+          <input class="vh" type="file" id="photo-input" accept="image/*">
+          <span id="photo-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+          <img id="photo-prev" alt="Gekozen foto" hidden>
+          <span class="vh">Foto toevoegen</span>
+        </label>
+        <input class="field" id="caption" type="text" maxlength="140" placeholder="Zeg er iets bij (optioneel)" autocomplete="off" aria-label="Bijschrift">
+      </div>
+      <div class="sec-row">
+        <p class="compose-line" id="compose-line"></p>
+        <button type="button" class="link-btn" id="photo-remove" hidden>Foto weghalen</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <span class="label">Registreren voor</span>
+      <div class="chips" id="for-chips"></div>
+    </div>
+
+    <div class="tonight" id="tonight-line"></div>
+
+    <section class="sec">
+      <span class="label">Laatste registraties vanavond</span>
+      <div class="log" id="log"></div>
+    </section>
+  </main>
+
+  <!-- Ranglijst -->
+  <main class="view" id="view-ranglijst" hidden>
+    <div class="segs">
+      <div class="seg" role="group" aria-label="Periode">
+        <button type="button" id="seg-vanavond" aria-pressed="true">Vanavond</button>
+        <button type="button" id="seg-altijd" aria-pressed="false">Altijd</button>
+      </div>
+      <div class="seg" role="group" aria-label="Sorteren op">
+        <button type="button" id="seg-punten" aria-pressed="true">Punten</button>
+        <button type="button" id="seg-drankjes" aria-pressed="false">Drankjes</button>
+      </div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="board" id="board"></div>
+    <section class="sec" id="trend-sec" hidden></section>
+    <p class="hint">Een avond loopt tot 07:00 's ochtends. Punten komen uit drankjes, uitdagingen en voorspellingen. Tik op een naam voor het profiel.</p>
+  </main>
+
+  <!-- Groep -->
+  <main class="view" id="view-groep" hidden>
+    <div class="card" id="invite-card" hidden>
+      <h2>Vrienden uitnodigen</h2>
+      <p>Stuur deze link naar de groep. Wie hem opent, doet meteen mee, zonder account. Deel hem alleen met vrienden.</p>
+      <div class="add">
+        <input class="field" id="invite-link" type="text" readonly aria-label="Uitnodigingslink">
+        <button type="button" class="btn-sec" id="invite-copy">Kopieer</button>
+      </div>
+      <div class="sec-row"><span class="hint" id="invite-code"></span><button type="button" class="link-btn" id="invite-share" hidden>Delen via…</button></div>
+      <p class="hint">Tip: zet de app op je beginscherm. iPhone: Safari, Deel-knop, Zet op beginscherm. Android: Chrome-menu, Toevoegen aan startscherm.</p>
+    </div>
+    <section class="sec">
+      <span class="label" id="members-label">Groep</span>
+      <div class="members" id="members"></div>
+    </section>
+    <form class="add" id="add-member">
+      <input class="field" id="add-member-name" type="text" maxlength="24" placeholder="Naam toevoegen" autocomplete="off" aria-label="Naam toevoegen">
+      <button type="submit" class="btn-sec" id="add-member-btn">Toevoegen</button>
+    </form>
+    <p class="hint" id="add-hint"></p>
+    <form class="card form" id="points-form">
+      <h2>Puntentelling</h2>
+      <p>Punten per drankje voor de ranglijst. Zet een min voor strafpunten, zoals −3 voor een barfje. Geldt ook voor eerdere registraties.</p>
+      <div class="points-grid" id="points-grid"></div>
+      <button type="submit" class="btn-sec" id="points-save" disabled>Opslaan</button>
+    </form>
+  </main>
+
+  <!-- Profiel -->
+  <main class="view" id="view-profiel" hidden></main>
+</div>
+
+<nav class="tabs" aria-label="Weergaven">
+  <div class="tabs-in">
+    <button type="button" data-tab="feed" id="tab-feed">
+      <span class="tab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="3"/><path d="M4 14l4.5-4 4 3.5 2.5-2 5 4"/></svg></span>Feed
+      <span class="tab-badge" id="badge-feed" hidden></span>
+    </button>
+    <button type="button" data-tab="spel" id="tab-spel">
+      <span class="tab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.8 2.8 0 0 0 3 4M17 6h2.5a2.8 2.8 0 0 1-3 4M12 14v4M8 20.5h8"/></svg></span>Spel
+      <span class="tab-badge" id="badge-spel" hidden></span>
+    </button>
+    <button type="button" data-tab="tellen" id="tab-tellen" class="tab-main" aria-current="page">
+      <span class="tab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5.5 5v14M9.5 5v14M13.5 5v14M17.5 5v14M3 16.5L20 7.5"/></svg></span>Tellen
+    </button>
+    <button type="button" data-tab="ranglijst" id="tab-ranglijst">
+      <span class="tab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18M5 20v-6h4v6M10 20V8h4v12M15 20v-9h4v9"/></svg></span>Ranglijst
+    </button>
+    <button type="button" data-tab="groep" id="tab-groep">
+      <span class="tab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16.5 14.2c2.6.3 4.5 2.6 4.5 5.8"/></svg></span>Groep
+    </button>
+  </div>
+</nav>
+
+<div class="toast" id="toast" role="status" hidden><span id="toast-text"></span><button type="button" id="toast-undo" hidden>Ongedaan maken</button></div>
+<div class="lightbox" id="lightbox" hidden><button type="button" class="lightbox-close" id="lightbox-close" aria-label="Sluiten">×</button><img id="lightbox-img" alt="Foto groot"></div>
+
+<script src="vendor/supabase.js"></script>
+<script src="config.js"></script>
+<script src="backend.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
