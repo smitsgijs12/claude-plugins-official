@@ -14,9 +14,12 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<!-- The fonts never hold up the app: loaded on the side (preload, then switched on), and with bad or
+     no reception the system fonts below are used. display=swap shows text right away meanwhile. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Inter:wght@400;500;600;700&display=swap">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Inter:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Inter:wght@400;500;600;700&display=swap"></noscript>
 <style>
 /* Layout: one phone-width column; sticky header, six views (feed, spel, tellen, ranglijst, groep, profiel), fixed five-item tab bar. Dark only, by choice: it's used at night in a bar. */
 :root {
@@ -47,7 +50,10 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
 button:disabled { cursor: default; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
-input, select { font: inherit; color: var(--ink); }
+/* 16px or more: iOS Safari zooms in on any smaller text field (and stays zoomed). After the font shorthand. */
+input, select, textarea { font: inherit; font-size: 16px; color: var(--ink); }
+/* A quick second tap (two beers) is two taps, never a double-tap zoom. Pinch-zoom stays available. */
+button, label, a, .pill, .tabs, .chip { touch-action: manipulation; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .app { max-width: 560px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 calc(104px + env(safe-area-inset-bottom, 0px)); }
@@ -56,18 +62,38 @@ input, select { font: inherit; color: var(--ink); }
 .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); display: flex; align-items: center; gap: 10px; padding-block: 16px 14px; }
 .btn-back { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; background: var(--panel); flex: none; }
 .btn-back svg { width: 20px; height: 20px; }
-.brand { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.brand { display: flex; flex-direction: column; min-width: 88px; flex: 1; }
 .brand b { font-family: var(--font-display); font-weight: 800; font-size: 22px; letter-spacing: -0.01em; font-stretch: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .brand span { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.top-acts { display: flex; align-items: center; gap: 8px; flex: none; }
-.btn-clear { color: var(--muted); font-size: 16px; padding: 8px 6px; }
-.btn-clear:not(:disabled):hover { color: var(--ink); }
-.btn-clear:disabled { opacity: 0.5; }
-.btn-reg { font-weight: 700; font-size: 16px; padding: 9px 14px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); white-space: nowrap; }
-.btn-reg:disabled { background: var(--panel); color: var(--muted); }
+/* Which night the drinks count for always shows in full; only the name in front of it gets shortened. */
+.brand #night-label { display: flex; min-width: 0; }
+.brand #night-label > span { flex: none; overflow: visible; }
+.brand #night-label .nl-me { flex: 0 1 auto; min-width: 0; overflow: hidden; }
+.brand .nl-pre.squeezed { display: none; }
+@media (max-width: 340px) { .brand .nl-pre { display: none; } }
+.top-acts { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 0; }
+.btn-reg { display: inline-flex; max-width: 100%; min-width: 0; font-weight: 700; font-size: 15px; padding: 9px 14px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); white-space: nowrap; }
+/* On a narrow screen only the name gets shortened, never "Registreer voor" or the title. */
+.btn-reg .reg-name { flex: 0 1 auto; min-width: 2.2em; max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
+/* Registering for someone else looks different, so it is hard to do by accident. */
+.btn-reg.for-other { background: var(--accent-soft); color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+/* Cannot register yet: looks off, but a tap still says why. */
+.btn-reg.is-blocked { background: var(--panel); color: var(--muted); box-shadow: none; }
+@media (max-width: 380px) { .top { gap: 8px; } .btn-reg { padding: 9px 13px; } }
+/* Narrow phones: "Registreer voor" small on top, the name below it, so the name keeps its room. */
+@media (max-width: 370px) {
+  .btn-reg { display: inline-block; min-height: 40px; padding: 5px 13px; border-radius: 14px; text-align: left; line-height: 1.2; }
+  .btn-reg .reg-verb { display: block; font-size: 11.5px; font-weight: 600; }
+  .btn-reg .reg-name { display: inline-block; max-width: 6.5em; vertical-align: bottom; }
+}
 
 .banner { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; color: var(--muted); margin-bottom: 14px; }
 .banner b { color: var(--ink); font-weight: 600; }
+.banner .bl { margin: 0; }
+.banner .bl + .bl { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.banner .link-btn { display: inline-block; padding: 10px 4px; margin: -10px 0 -10px -2px; } /* bigger to tap, same line height */
+.banner .link-btn::after { content: none; }
+.pend-tag { display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11.5px; font-weight: 600; white-space: nowrap; }
 
 /* Generic */
 .view { display: flex; flex-direction: column; gap: 16px; }
@@ -80,11 +106,15 @@ input, select { font: inherit; color: var(--ink); }
 .hint { color: var(--muted); font-size: 13px; margin: 0; }
 .warn { color: var(--bad); }
 .empty { color: var(--muted); font-size: 14px; padding-block: 6px; }
-.link-btn { color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+.link-btn { position: relative; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+/* A text link looks small but is about 43 px high to tap, without moving anything around it. */
+.link-btn::after { content: ""; position: absolute; inset: -12px -6px; }
 .link-btn:hover { color: var(--ink); }
-.link-btn.warn { color: var(--bad); }
+.link-btn.warn { color: var(--bad); font-weight: 600; }
 .btn-sec { padding: 11px 16px; border-radius: 12px; background: var(--ink); color: var(--bg); font-weight: 600; white-space: nowrap; }
 .btn-sec:disabled { background: var(--line); color: var(--muted); }
+.btn-sec.ghost { background: var(--line); color: var(--ink); }
+.btn-sec.is-armed { background: var(--bad); color: #1A0705; }
 .btn-sm { padding: 7px 12px; border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 600; font-size: 13.5px; white-space: nowrap; }
 .btn-sm.ghost { background: transparent; border: 1px solid var(--line); color: var(--ink); }
 .btn-sm.ghost[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
@@ -94,6 +124,10 @@ input, select { font: inherit; color: var(--ink); }
 .form { display: flex; flex-direction: column; gap: 10px; }
 .form-row { display: flex; gap: 8px; }
 .form-row > * { flex: 1; min-width: 0; }
+/* A label above the field that stays while typing (an empty date or time box on an iPhone shows nothing). */
+.fld { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.fld-l { font-size: 12.5px; color: var(--muted); }
+.field[type="date"], .field[type="time"] { min-height: 46px; display: block; }
 .add { display: flex; gap: 8px; }
 .add input { flex: 1; min-width: 0; }
 .radio-row { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -115,6 +149,14 @@ input, select { font: inherit; color: var(--ink); }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .chip:disabled { opacity: 0.45; }
 .chip .me { font-size: 11px; opacity: 0.7; }
+.chip.taken { border-style: dashed; }
+.chip.taken .me { opacity: 1; color: var(--muted); }
+.chip.armed { border: 1px solid var(--bad); color: var(--bad); font-weight: 600; }
+.chip.hl { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+#who-chips { min-height: 38px; }
+/* The name rows wrap, so all 15 names are in view and big enough to hit. */
+#who-chips, #for-chips { flex-wrap: wrap; overflow: visible; }
+#who-chips .chip, #for-chips .chip { min-height: 44px; padding: 10px 16px; font-size: 15px; white-space: normal; max-width: 100%; text-align: left; overflow-wrap: anywhere; }
 .chip-av { padding: 5px 12px 5px 5px; }
 .chip-sm { padding: 6px 11px; font-size: 13px; font-weight: 600; }
 .av { width: 36px; height: 36px; border-radius: 50%; display: inline-grid; place-items: center; font-weight: 700; font-size: 13px; flex: none; position: relative; letter-spacing: 0.02em; }
@@ -148,6 +190,18 @@ input, select { font: inherit; color: var(--ink); }
 .photo-btn:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
 .compose-line { color: var(--muted); font-size: 13px; margin: 0; }
 .compose-line b { color: var(--accent); font-weight: 700; }
+.compose-line .for-tag { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.compose-foot { flex-wrap: wrap; align-items: flex-start; }
+.compose-acts { display: flex; gap: 18px; margin-left: auto; }
+.compose-acts .link-btn { padding-block: 4px; }
+.compose-acts .link-btn::after { inset: -8px -6px; } /* keeps clear of the caption field above */
+.stale { border: 1px solid var(--accent); }
+.stale h2 { font-size: 18px; }
+.stale p b { color: var(--ink); font-weight: 600; }
+.stale-acts { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+.stale-acts .btn-sm { padding: 10px 16px; font-size: 14.5px; }
+.stale-acts .btn-sm[aria-disabled="true"] { opacity: 0.6; }
+.flash { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 14px; }
 .tonight { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
 .tonight b { color: var(--ink); font-weight: 600; }
 .log { display: flex; flex-direction: column; }
@@ -156,8 +210,13 @@ input, select { font: inherit; color: var(--ink); }
 .log-row time { color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
 .log-row .what { min-width: 0; }
 .log-row .what span { color: var(--muted); }
+.log-row .what .pend-tag { color: var(--accent); }
 
 /* Feed */
+/* The app keeps the post you are reading in place itself (see renderFeed); the browser's own
+   scroll anchoring would correct a second time. */
+#view-feed { overflow-anchor: none; }
+.feed-new { position: fixed; z-index: 6; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 88px); padding: 9px 16px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 14px; white-space: nowrap; box-shadow: 0 6px 20px rgba(0,0,0,0.45); }
 .feed { display: flex; flex-direction: column; gap: 14px; }
 .post { background: var(--panel); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; padding-bottom: 10px; }
 .post-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
@@ -166,12 +225,14 @@ input, select { font: inherit; color: var(--ink); }
 .post-pts { font-family: var(--font-display); font-weight: 800; font-size: 15px; color: var(--accent); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .post-pts.neg { color: var(--barf); }
 .post-photo { background: var(--well); position: relative; display: block; width: 100%; cursor: zoom-in; }
-.post-img { display: block; width: 100%; max-height: 560px; object-fit: cover; }
-.photo-missing { display: grid; place-items: center; height: 160px; color: var(--muted); font-size: 13px; }
+/* The box has its size before the photo arrives (the post's own shape inline, else portrait). */
+.post-img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 5; max-height: 560px; object-fit: cover; }
+.photo-missing { display: grid; place-items: center; width: 100%; aspect-ratio: 4 / 5; max-height: 560px; padding: 12px; text-align: center; color: var(--muted); font-size: 13px; }
+.grid3 .photo-missing { aspect-ratio: auto; height: 100%; padding: 6px; font-size: 11px; }
 .post-body { padding: 10px 14px 0; display: flex; flex-direction: column; gap: 4px; }
 .post-cap { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
 .post-drinks { margin: 0; color: var(--muted); font-size: 13.5px; }
-.post-acts { display: flex; align-items: center; gap: 4px; padding: 6px 8px 0; }
+.post-acts { display: flex; align-items: center; gap: 4px; padding: 6px 8px 0; flex-wrap: wrap; }
 .act { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 999px; color: var(--muted); font-weight: 600; font-size: 14px; }
 .act svg { width: 21px; height: 21px; }
 .act.on { color: var(--accent); }
@@ -184,6 +245,8 @@ input, select { font: inherit; color: var(--ink); }
 .cmt-text { flex: 1; min-width: 0; }
 .cmt-text .nm-btn { display: inline; margin-right: 6px; }
 .cmt time { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.cmt .cmt-del { font-size: 18px; line-height: 1; text-decoration: none; padding: 0 4px; }
+.cmt .cmt-del::after { inset: -12px -12px; }
 .more { padding: 6px 14px 0; align-self: flex-start; }
 .cmt-form { display: flex; gap: 8px; padding: 10px 14px 0; }
 .cmt-form input { flex: 1; min-width: 0; padding: 9px 12px; border-radius: 999px; }
@@ -226,11 +289,14 @@ input, select { font: inherit; color: var(--ink); }
 .game-meta { color: var(--muted); font-size: 12.5px; }
 .claims { display: flex; flex-direction: column; }
 .claim { display: flex; align-items: center; gap: 10px; padding-block: 8px; border-top: 1px solid var(--line); }
-.claim .nm-btn { flex: 1; }
-.claim-right { display: flex; align-items: center; gap: 8px; flex: none; }
+.claim-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.claim-who .state { white-space: normal; }
+.claim-right { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 14px; flex: 0 1 auto; min-width: 0; }
+.claim-right .link-btn.warn { white-space: normal; text-align: right; }
 .state { font-size: 12.5px; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .state.ok { color: var(--good); }
-.game-acts { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.game-acts { display: flex; gap: 14px 18px; align-items: center; flex-wrap: wrap; }
+.game-acts .link-btn.warn, .vote-btns .link-btn { white-space: normal; text-align: left; }
 .odds { display: flex; flex-direction: column; background: var(--well); border-radius: 14px; overflow: hidden; }
 .odd { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); width: 100%; }
 .odd:last-child { border-bottom: 0; }
@@ -248,7 +314,9 @@ button.odd:hover { background: var(--panel); }
 .gain.up { color: var(--good); }
 .gain.down { color: var(--bad); }
 .vote { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
-.vote-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.vote-btns { display: flex; gap: 8px 14px; flex-wrap: wrap; align-items: center; }
+.vote-btns .btn-sm { padding: 10px 14px; }
+.vote-open { align-self: flex-start; font-size: 14px; }
 
 /* Ranglijst */
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
@@ -280,12 +348,19 @@ button.row:hover { background: #232327; }
 .member { display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .member:last-child { border-bottom: 0; }
 .member .who { flex: 1; }
-.member .acts { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+.member .acts { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; min-width: 0; }
+.member .acts .link-btn.warn { white-space: normal; text-align: left; }
 .member input { flex: 1; min-width: 0; }
 .tag-me { font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent-ink); background: var(--accent); padding: 3px 8px; border-radius: 999px; }
-.points-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.points-grid label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); min-width: 0; }
-.points-grid input { text-align: center; font-family: var(--font-display); font-weight: 800; font-size: 20px; padding: 8px; }
+.points-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 10px; }
+.pt { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pt-name { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.pt.is-barf .pt-name { color: var(--barf); }
+.pill.pill-sm { height: 44px; }
+.pill-sm button { font-size: 22px; }
+.pill-sm output { font-size: 19px; min-width: 2.4ch; }
+.pill-sm output.neg { color: var(--bad); }
+.pill-sm output.changed { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 4px; }
 @media (max-width: 370px) { .points-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* Profiel */
@@ -315,16 +390,28 @@ button.row:hover { background: #232327; }
 .tab-badge { position: absolute; top: 5px; left: calc(50% + 8px); min-width: 17px; height: 17px; padding: 0 5px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 10.5px; font-weight: 800; display: grid; place-items: center; line-height: 1; }
 
 /* Toast & lightbox */
-.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 7; width: min(528px, calc(100% - 32px)); background: var(--ink); color: var(--bg); border-radius: 14px; padding: 12px 14px; display: flex; gap: 12px; align-items: center; font-size: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
+.toasts { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 7; width: min(528px, calc(100% - 32px)); display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast { pointer-events: auto; background: var(--ink); color: var(--bg); border-radius: 14px; padding: 12px 14px; display: flex; gap: 12px; align-items: center; font-size: 14px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
 .toast span { flex: 1; min-width: 0; }
-.toast button { font-weight: 700; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; }
+/* The button is as high as the whole toast. */
+.toast button { font-weight: 700; text-decoration: underline; text-underline-offset: 2px; white-space: nowrap; padding: 12px 10px; margin: -12px -10px -12px 0; }
+/* Something went wrong: red with a mark in front, so it never looks like "it worked". */
+.toast.is-err { background: #B3372B; color: #fff; font-weight: 500; }
+.toast.is-err::before { content: "!"; flex: none; width: 22px; height: 22px; border-radius: 50%; background: #fff; color: #B3372B; font-weight: 800; display: grid; place-items: center; }
+/* An older toast whose undo still works, moved up by a newer one. */
+.toast-prev { background: var(--panel); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line), 0 8px 30px rgba(0,0,0,0.5); font-size: 13px; padding: 10px 14px; }
+.toast-prev span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.toast-prev button { color: var(--accent); padding-block: 10px; margin-block: -10px; }
 .lightbox { position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,0.94); display: grid; place-items: center; padding-top: max(16px, env(safe-area-inset-top, 0px)); padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); cursor: zoom-out; }
 .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 8px; }
+.lightbox-msg { margin: 0; max-width: 280px; text-align: center; color: var(--ink); font-size: 15px; }
 .lightbox-close { position: absolute; top: max(14px, env(safe-area-inset-top, 0px)); right: max(14px, env(safe-area-inset-right, 0px)); width: 40px; height: 40px; border-radius: 50%; background: var(--panel); font-size: 22px; line-height: 1; }
 @media (prefers-reduced-motion: no-preference) {
   .toast { animation: rise 180ms ease-out; }
-  @keyframes rise { from { transform: translate(-50%, 8px); opacity: 0.4; } to { transform: translate(-50%, 0); opacity: 1; } }
+  @keyframes rise { from { transform: translateY(8px); opacity: 0.4; } to { transform: none; opacity: 1; } }
   .act.pop svg { animation: pop 260ms ease-out; }
+  .flash { animation: flash 600ms ease-in-out 3; }
+  @keyframes flash { 50% { outline-color: transparent; } }
   @keyframes pop { 0% { transform: scale(1); } 40% { transform: scale(1.3) rotate(-8deg); } 100% { transform: scale(1); } }
 }
 
@@ -381,13 +468,19 @@ button.row:hover { background: #232327; }
 <div class="gate" id="gate" hidden>
   <div class="gate-card">
     <b class="gate-logo">Turflijst</b>
-    <div id="gate-loading"><p class="hint">Verbinden…</p></div>
+    <div class="form" id="gate-loading">
+      <p class="hint">Verbinden…</p>
+      <div class="form" id="gate-slow" hidden>
+        <p class="hint">Dit duurt lang. Slecht bereik? We blijven het proberen.</p>
+        <button type="button" class="btn-sec" id="gate-slow-retry">Opnieuw proberen</button>
+      </div>
+    </div>
     <form class="form" id="gate-code" hidden>
       <h2>Doe mee</h2>
-      <p class="hint">Vul de groepscode in die je van je vrienden kreeg, of open de uitnodigingslink.</p>
-      <input class="field" id="gate-input" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Groepscode" aria-label="Groepscode">
+      <p class="hint" id="gate-hint">Typ de groepscode die je van je vrienden kreeg, of plak de uitnodigingslink. Hoofdletters maken niet uit.</p>
+      <input class="field" id="gate-input" type="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" placeholder="Groepscode of uitnodigingslink" aria-label="Groepscode of uitnodigingslink" aria-describedby="gate-hint gate-error">
       <button type="submit" class="btn-sec" id="gate-submit">Meedoen</button>
-      <p class="hint warn" id="gate-error" hidden>Deze code klopt niet. Controleer hem en probeer het opnieuw.</p>
+      <p class="hint warn" id="gate-error" role="alert" hidden></p>
     </form>
     <div class="form" id="gate-msg" hidden>
       <p id="gate-msg-text"></p>
@@ -398,10 +491,9 @@ button.row:hover { background: #232327; }
 <div class="app">
   <header class="top">
     <button type="button" class="btn-back" id="btn-back" aria-label="Terug" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
-    <div class="brand"><b id="brand-title">Turflijst</b><span id="night-label">Vanavond</span></div>
+    <div class="brand"><b id="brand-title">Turflijst</b><span id="night-label"><span class="nl-me" id="nl-me"></span><span class="nl-pre" id="nl-pre">Avond van&nbsp;</span><span class="nl-date" id="night-date">Vanavond</span></span></div>
     <div class="top-acts" id="top-acts">
-      <button type="button" class="btn-clear" id="btn-clear">Wissen</button>
-      <button type="button" class="btn-reg" id="btn-reg">Registreren →</button>
+      <button type="button" class="btn-reg" id="btn-reg">Registreren</button>
     </div>
   </header>
 
@@ -409,17 +501,18 @@ button.row:hover { background: #232327; }
 
   <!-- Feed -->
   <main class="view" id="view-feed" hidden>
+    <button type="button" class="feed-new" id="feed-new" hidden></button>
     <section class="sec" id="online-strip" hidden></section>
     <section class="sec">
       <div class="sec-row"><span class="label">Agenda</span><button type="button" class="link-btn" id="btn-plan">+ Plan iets</button></div>
       <form class="card form" id="event-form" hidden>
         <h2>Iets plannen</h2>
-        <input class="field" id="ev-title" type="text" maxlength="60" placeholder="Bijvoorbeeld: Carnaval, verjaardag Sem" autocomplete="off" aria-label="Wat gaan jullie doen">
+        <label class="fld"><span class="fld-l">Wat gaan jullie doen?</span><input class="field" id="ev-title" type="text" maxlength="60" placeholder="Bijvoorbeeld: Carnaval, verjaardag Sem" autocomplete="off"></label>
         <div class="form-row">
-          <input class="field" id="ev-date" type="date" aria-label="Datum">
-          <input class="field" id="ev-time" type="time" aria-label="Tijd (optioneel)">
+          <label class="fld"><span class="fld-l">Datum</span><input class="field" id="ev-date" type="date"></label>
+          <label class="fld"><span class="fld-l">Hoe laat? (mag leeg)</span><input class="field" id="ev-time" type="time"></label>
         </div>
-        <div class="form-row"><button type="submit" class="btn-sec">Plannen</button><button type="button" class="btn-sec" id="ev-cancel" style="background:var(--line);color:var(--ink)">Annuleren</button></div>
+        <div class="form-row"><button type="submit" class="btn-sec">Plannen</button><button type="button" class="btn-sec ghost" id="ev-cancel">Annuleren</button></div>
       </form>
       <div class="events" id="events"></div>
     </section>
@@ -459,7 +552,7 @@ button.row:hover { background: #232327; }
         <span class="label">Hoe waarschijnlijk?</span>
         <div class="radio-row" id="bet-odds" role="radiogroup" aria-label="Hoe waarschijnlijk is het"></div>
         <button type="submit" class="btn-sec" id="bet-submit">Voorspelling plaatsen</button>
-        <p class="hint">Iedereen zet punten in op Ja of Nee. Goed geraden levert inzet × vermenigvuldiger op, fout kost je inzet. Zodra iemand de uitkomst stemt, sluit de inzet.</p>
+        <p class="hint">Iedereen zet punten in op Ja of Nee. Goed geraden: je krijgt er punten bij (10 pnt op ×1,65 = +7). Fout: je bent je inzet kwijt. Met ‘Hoe waarschijnlijk?’ bepaal jij hoeveel Ja en Nee opleveren, voor iedereen. Inzetten kan tot iemand de uitslag doorgeeft, en uiterlijk tot 07:00.</p>
       </form>
       <div class="feed" id="bet-list"></div>
     </section>
@@ -471,11 +564,14 @@ button.row:hover { background: #232327; }
       <h2>Wie ben jij?</h2>
       <p id="who-text">Kies je naam, dan registreer je standaard voor jezelf.</p>
       <div class="chips" id="who-chips"></div>
+      <p class="hint" id="who-note" hidden>Neem een naam alleen over als jij het bent. Het andere toestel krijgt dan een melding en moet opnieuw kiezen.</p>
       <form class="add" id="who-add">
         <input class="field" id="who-add-name" type="text" maxlength="24" placeholder="Jouw naam" autocomplete="off" aria-label="Jouw naam">
         <button type="submit" class="btn-sec" id="who-add-btn">Dit ben ik</button>
       </form>
     </div>
+
+    <div id="stale-box" class="sec" hidden></div>
 
     <div class="counters" id="counters"></div>
 
@@ -489,15 +585,18 @@ button.row:hover { background: #232327; }
         </label>
         <input class="field" id="caption" type="text" maxlength="140" placeholder="Zeg er iets bij (optioneel)" autocomplete="off" aria-label="Bijschrift">
       </div>
-      <div class="sec-row">
+      <div class="sec-row compose-foot">
         <p class="compose-line" id="compose-line"></p>
-        <button type="button" class="link-btn" id="photo-remove" hidden>Foto weghalen</button>
+        <div class="compose-acts">
+          <button type="button" class="link-btn" id="photo-remove" hidden>Foto weghalen</button>
+          <button type="button" class="link-btn" id="btn-clear" hidden>Teller wissen</button>
+        </div>
       </div>
     </div>
 
-    <div class="sec">
-      <span class="label">Registreren voor</span>
-      <div class="chips" id="for-chips"></div>
+    <div class="sec" id="for-sec">
+      <span class="label">Voor wie tel je?</span>
+      <div class="chips" id="for-chips" role="group" aria-label="Voor wie tel je?"></div>
     </div>
 
     <div class="tonight" id="tonight-line"></div>
@@ -510,6 +609,7 @@ button.row:hover { background: #232327; }
 
   <!-- Ranglijst -->
   <main class="view" id="view-ranglijst" hidden>
+    <p class="hint" id="board-points" hidden></p>
     <div class="segs">
       <div class="seg" role="group" aria-label="Periode">
         <button type="button" id="seg-vanavond" aria-pressed="true">Vanavond</button>
@@ -536,7 +636,8 @@ button.row:hover { background: #232327; }
         <button type="button" class="btn-sec" id="invite-copy">Kopieer</button>
       </div>
       <div class="sec-row"><span class="hint" id="invite-code"></span><button type="button" class="link-btn" id="invite-share" hidden>Delen via…</button></div>
-      <p class="hint">Tip: zet de app op je beginscherm. iPhone: Safari, Deel-knop, Zet op beginscherm. Android: Chrome-menu, Toevoegen aan startscherm.</p>
+      <p class="hint warn" id="invite-warn" hidden>Let op: dit is een test-adres van Vercel. Vrienden moeten hier inloggen bij Vercel. Open de gewone site en kopieer de link daar.</p>
+      <p class="hint">Tip: zet de app op je beginscherm. iPhone: Safari, Deel-knop, Zet op beginscherm. Open daarna het icoontje en tik je naam aan; staat er (bezet) bij, tik dan nog een keer. Android: Chrome-menu, Toevoegen aan startscherm.</p>
     </div>
     <section class="sec">
       <span class="label" id="members-label">Groep</span>
@@ -549,9 +650,15 @@ button.row:hover { background: #232327; }
     <p class="hint" id="add-hint"></p>
     <form class="card form" id="points-form">
       <h2>Puntentelling</h2>
-      <p>Punten per drankje voor de ranglijst. Zet een min voor strafpunten, zoals −3 voor een barfje. Geldt ook voor eerdere registraties.</p>
+      <p>Punten per drankje voor de ranglijst. Tik op − voor strafpunten, zoals −3 voor een barfje. Een wijziging geldt voor iedereen, ook voor vorige avonden.</p>
       <div class="points-grid" id="points-grid"></div>
-      <button type="submit" class="btn-sec" id="points-save" disabled>Opslaan</button>
+      <p class="hint warn" id="points-conflict" hidden>Iemand anders heeft de punten net aangepast. Tik op Annuleren om de nieuwe punten te zien.</p>
+      <p class="hint warn" id="points-confirm" role="alert" hidden></p>
+      <div class="form-row">
+        <button type="submit" class="btn-sec" id="points-save" data-confirm="1" disabled>Opslaan</button>
+        <button type="button" class="btn-sec ghost" id="points-cancel" hidden>Annuleren</button>
+      </div>
+      <p class="hint" id="points-meta" hidden></p>
     </form>
   </main>
 
@@ -581,8 +688,11 @@ button.row:hover { background: #232327; }
   </div>
 </nav>
 
-<div class="toast" id="toast" role="status" hidden><span id="toast-text"></span><button type="button" id="toast-undo" hidden>Ongedaan maken</button></div>
-<div class="lightbox" id="lightbox" hidden><button type="button" class="lightbox-close" id="lightbox-close" aria-label="Sluiten">×</button><img id="lightbox-img" alt="Foto groot"></div>
+<div class="toasts">
+  <div class="toast toast-prev" id="toast-prev" hidden><span id="toast-prev-text"></span><button type="button" id="toast-prev-undo">Ongedaan maken</button></div>
+  <div class="toast" id="toast" role="status" hidden><span id="toast-text"></span><button type="button" id="toast-undo" hidden>Ongedaan maken</button></div>
+</div>
+<div class="lightbox" id="lightbox" hidden><button type="button" class="lightbox-close" id="lightbox-close" aria-label="Sluiten">×</button><img id="lightbox-img" alt="Foto groot"><p class="lightbox-msg" id="lightbox-msg" role="status" hidden>Foto laden mislukt. Check je bereik en probeer het zo nog eens.</p></div>
 
 <script src="vendor/supabase.js"></script>
 <script src="config.js"></script>

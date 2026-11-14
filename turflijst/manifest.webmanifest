@@ -2,7 +2,6 @@
   "name": "Turflijst",
   "short_name": "Turflijst",
   "description": "Tel je drankjes en volg elkaars voortgang.",
-  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#121214",
